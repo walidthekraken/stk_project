@@ -1,7 +1,11 @@
 PYTHONPATH=. python -m stk_actor.learn
 (cd stk_actor; zip -r ../stk_actor.zip .)  
 <<<<<<< HEAD
+<<<<<<< HEAD
 master-dac rld stk-race --hide stk_actor.zip --num-karts 4
 =======
 master-dac rld stk-race --hide stk_actor.zip
 >>>>>>> bbc2d28 (add)
+=======
+master-dac rld stk-race --hide stk_actor.zip --num-karts 4
+>>>>>>> 6cf8d0a (add)
