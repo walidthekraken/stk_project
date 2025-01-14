@@ -103,7 +103,11 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
 
     def observation(self, obs):
         """
+<<<<<<< HEAD
         Process the observation into a flat numpy array.
+=======
+        Process the observation into a flat tensor.
+>>>>>>> bbc2d28 (add)
         
         Args:
             obs: The raw observation from the environment.
