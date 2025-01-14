@@ -25,14 +25,15 @@ if __name__ == "__main__":
     env = env_agent.envs[0]
 
     # (2) Learn
+    mod_path = Path(inspect.getfile(get_wrappers)).parent
     actor = Actor(
         env.observation_space, env.action_space,
         net_arch=[1024,1024,1024,1024], 
         activation_fn=torch.nn.SiLU,
-        state_dict_path='policy_1024_1024_1024_1024_SiLU_statedict'
+        state_dict_path=(mod_path / 'policy_1024_1024_1024_1024_SiLU_statedict')
     )
     # ...
 
     # (3) Save the actor sate
-    mod_path = Path(inspect.getfile(get_wrappers)).parent
+
     torch.save(actor.state_dict(), mod_path / "pystk_actor.pth")
