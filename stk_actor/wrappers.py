@@ -103,21 +103,23 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
 
     def observation(self, obs):
         """
-        Process the observation into a flat tensor.
+        Process the observation into a flat numpy array.
         
         Args:
             obs: The raw observation from the environment.
         
         Returns:
-            A preprocessed flat tensor.
+            A preprocessed flat numpy array.
         """
         continuous_obs, discrete_obs = obs['continuous'], obs['discrete']
-        continuous_tensor = torch.FloatTensor(continuous_obs)
+        continuous_array = np.array(continuous_obs, dtype=np.float32)
         
-        discrete_tensors = [
-            F.one_hot(torch.tensor(x), num_classes=num_classes.n).float()
+        discrete_arrays = [
+            np.eye(num_classes.n, dtype=np.float32)[x]
             for x, num_classes in zip(discrete_obs, self.env.observation_space['discrete'])
         ]
         
-        flat_tensor = torch.cat([continuous_tensor] + discrete_tensors)
-        return flat_tensor
+        flat_array = np.concatenate([continuous_array] + discrete_arrays)
+        return {
+            'obs':flat_array
+        }

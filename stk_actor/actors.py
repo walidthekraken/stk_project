@@ -2,7 +2,7 @@ import gymnasium as gym
 from bbrl.agents import Agent
 import torch
 from .agent import UnifiedSACPolicy
-
+from torch.distributions import Categorical
 
 class MyWrapper(gym.ActionWrapper):
     def __init__(self, env, option: int):
@@ -43,22 +43,29 @@ class Actor(Agent):
 
     def forward(self, t: int):
         # Computes probabilities over actions
-        observation = self.get(("env/env_obs", t))
+        observation = self.get(("env/env_obs/obs", t))
         logits = self.policy.forward(observation)
-        split_logits = torch.split(logits, self.action_dims, dim=-1)
-        self.set(("split_logits", t), split_logits)
+        self.set(("logits", t), logits)
+        self.set(("action_dims", t), torch.tensor(self.action_dims))
 
 
 class ArgmaxActor(Agent):
     """Actor that computes the action"""
 
     def forward(self, t: int):
-        split_logits = self.get(("split_logits", t))
+        logits = self.get(("logits", t))
+        action_dims = self.get(("action_dims", t))
+        split_logits = torch.split(logits, action_dims.tolist(), dim=-1)
         actions = []
+        
+                
         for logit in split_logits:
-            action = torch.argmax(logit, dim=-1)
+            distribution = Categorical(logits=logit)
+            action = distribution.sample()
+            # action = torch.argmax(logit, dim=-1)[0]
             actions.append(action)
-        self.set(("action", t), torch.stack(actions))
+        # print(actions)
+        self.set(("action", t), torch.stack(actions).unsqueeze(0))
 
 
 class SamplingActor(Agent):
