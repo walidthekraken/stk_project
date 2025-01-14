@@ -23,7 +23,7 @@ class Actor(Agent):
             *args, 
             net_arch=[1024,1024,1024,1024], 
             activation_fn=torch.nn.SiLU,
-            state_dict_path='policy_1024_1024_1024_1024_SiLU_statedict',
+            state_dict_path='stk_actor/policy_1024_1024_1024_1024_SiLU_statedict',
             **kwargs,
         ):
         super().__init__(*args, **kwargs)
