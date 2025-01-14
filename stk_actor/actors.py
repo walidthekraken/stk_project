@@ -25,7 +25,7 @@ class Actor(Agent):
             *args, 
             net_arch=[1024,1024,1024,1024], 
             activation_fn=torch.nn.SiLU,
-            state_dict_path= (Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
+            state_dict_path= None,#(Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
             **kwargs,
         ):
         super().__init__(*args, **kwargs)
@@ -36,7 +36,8 @@ class Actor(Agent):
             net_arch = net_arch,
             activation_fn = activation_fn,
         )
-        policy.load_state_dict(torch.load(state_dict_path))
+        if state_dict_path is not None:
+            policy.load_state_dict(torch.load(state_dict_path))
 
         self.policy = policy
         self.observation_space = observation_space
