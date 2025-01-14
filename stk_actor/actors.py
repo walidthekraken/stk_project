@@ -3,6 +3,8 @@ from bbrl.agents import Agent
 import torch
 from .agent import UnifiedSACPolicy
 from torch.distributions import Categorical
+from pathlib import Path
+import inspect
 
 class MyWrapper(gym.ActionWrapper):
     def __init__(self, env, option: int):
@@ -23,7 +25,7 @@ class Actor(Agent):
             *args, 
             net_arch=[1024,1024,1024,1024], 
             activation_fn=torch.nn.SiLU,
-            state_dict_path='policy_1024_1024_1024_1024_SiLU_statedict',
+            state_dict_path= (Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
             **kwargs,
         ):
         super().__init__(*args, **kwargs)
