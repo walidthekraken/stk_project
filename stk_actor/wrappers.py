@@ -121,5 +121,5 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         
         flat_array = np.concatenate([continuous_array] + discrete_arrays)
         return {
-            'obs':flat_array
+            'obs':flat_array,
         }
