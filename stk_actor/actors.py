@@ -23,7 +23,7 @@ class Actor(Agent):
             observation_space, 
             action_space,
             *args, 
-            net_arch=[1024,1024,1024,1024], 
+            net_arch=[1024,1024,1024,1024, 1024], 
             activation_fn=torch.nn.SiLU,
             state_dict_path= None,#(Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
             **kwargs,
