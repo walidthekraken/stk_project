@@ -8,7 +8,7 @@ from bbrl.agents.gymnasium import ParallelGymAgent, make_env
 # Note the use of relative imports
 from .actors import Actor
 from .pystk_actor import env_name, get_wrappers, player_name
-
+from .agent import UnifiedSACPolicy
 
 if __name__ == "__main__":
     # Setup the environment
@@ -25,9 +25,13 @@ if __name__ == "__main__":
     env = env_agent.envs[0]
 
     # (2) Learn
-
-    actor = Actor(env.observation_space, env.action_space)
-    ...
+    actor = Actor(
+        env.observation_space, env.action_space,
+        net_arch=[1024,1024,1024,1024], 
+        activation_fn=torch.nn.SiLU,
+        state_dict_path='policy_1024_1024_1024_1024_SiLU_statedict'
+    )
+    # ...
 
     # (3) Save the actor sate
     mod_path = Path(inspect.getfile(get_wrappers)).parent

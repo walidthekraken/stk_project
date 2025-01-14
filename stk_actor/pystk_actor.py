@@ -5,12 +5,13 @@ import gymnasium as gym
 # Imports our Actor class
 # IMPORTANT: note the relative import
 from .actors import Actor, MyWrapper, ArgmaxActor, SamplingActor
+from .wrappers import PreprocessObservationWrapper
 
 #: The base environment name
 env_name = "supertuxkart/flattened_multidiscrete-v0"
 
 #: Player name
-player_name = "Example"
+player_name = "CherineJSK2"
 
 
 def get_actor(
@@ -31,5 +32,5 @@ def get_wrappers() -> List[Callable[[gym.Env], gym.Wrapper]]:
     environment"""
     return [
         # Example of a custom wrapper
-        lambda env: MyWrapper(env, option="1")
+        lambda env: PreprocessObservationWrapper(env)
     ]

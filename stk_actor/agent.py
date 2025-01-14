@@ -1,145 +1,117 @@
+from typing import Dict, List, Tuple, Union, Type
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
-from stable_baselines3 import PPO, A2C
-from stable_baselines3.common.env_util import make_vec_env
 import gymnasium as gym
-from pystk2_gymnasium import AgentSpec
-from bbrl.agents.gymnasium import ParallelGymAgent, make_env
-from functools import partial
+from gymnasium import spaces
 
-import gymnasium as gym
-import numpy as np
+def get_device(device: Union[torch.device, str] = "auto") -> torch.device:
+    if device == "auto":
+        device = "cuda"
+    device = torch.device(device)
+    if device.type == torch.device("cuda").type and not torch.cuda.is_available():
+        return torch.device("cpu")
+    return device
 
-class ObsTimeExtensionWrapper(gym.Wrapper):
-    def __init__(self, env):
-        """
-        Initializes the wrapper to extend the observation with a memory of the past observation.
-        
-        :param env: The inner environment to wrap.
-        """
-        super(ObsTimeExtensionWrapper, self).__init__(env)
-        # Initialize memory with a null observation
-        self.prev_obs = np.zeros(env.observation_space.shape)
-        self.prev_prev_obs = np.zeros(env.observation_space.shape)
-        # Double the observation space
-        self.observation_space = self._extend_observation_space(self.env.observation_space)
+class BaseFeaturesExtractor(nn.Module):
+    def __init__(self, observation_space: gym.Space, features_dim: int = 0) -> None:
+        super().__init__()
+        assert features_dim > 0
+        self._observation_space = observation_space
+        self._features_dim = features_dim
+    @property
+    def features_dim(self) -> int:
+        return self._features_dim
 
-    def _extend_observation_space(self, observation_space):
+def get_flattened_obs_dim(observation_space: spaces.Space) -> int:
+    if isinstance(observation_space, spaces.MultiDiscrete):
+        return sum(observation_space.nvec)
+    else:
+        return spaces.utils.flatdim(observation_space)
+
+class FlattenExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space: gym.Space) -> None:
+        super().__init__(observation_space, get_flattened_obs_dim(observation_space))
+        self.flatten = nn.Flatten()
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        return self.flatten(observations)
+    
+class MlpExtractor(nn.Module):
+    def __init__(
+        self,
+        feature_dim: int,
+        net_arch: Union[List[int], Dict[str, List[int]]],
+        activation_fn: Type[nn.Module],
+        device: Union[torch.device, str] = "auto",
+    ) -> None:
+        super().__init__()
+        # device = torch.get_device(device)
+        policy_net: List[nn.Module] = []
+        value_net: List[nn.Module] = []
+        last_layer_dim_pi = feature_dim
+        last_layer_dim_vf = feature_dim
+
+        if isinstance(net_arch, dict):
+            pi_layers_dims = net_arch.get("pi", []) 
+            vf_layers_dims = net_arch.get("vf", []) 
+        else:
+            pi_layers_dims = vf_layers_dims = net_arch
+        for curr_layer_dim in pi_layers_dims:
+            policy_net.append(nn.Linear(last_layer_dim_pi, curr_layer_dim))
+            policy_net.append(activation_fn())
+            last_layer_dim_pi = curr_layer_dim
+        for curr_layer_dim in vf_layers_dims:
+            value_net.append(nn.Linear(last_layer_dim_vf, curr_layer_dim))
+            value_net.append(activation_fn())
+            last_layer_dim_vf = curr_layer_dim
+
+        self.latent_dim_pi = last_layer_dim_pi
+        self.latent_dim_vf = last_layer_dim_vf
+        self.policy_net = nn.Sequential(*policy_net)#.to(device)
+        self.value_net = nn.Sequential(*value_net)#.to(device)
+
+    def forward(self, features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Extends the observation space to accommodate the current and previous observations.
-        
-        :param observation_space: The original observation space.
-        :return: The extended observation space.
+        :return: latent_policy, latent_value of the specified network.
+            If all layers are shared, then ``latent_policy == latent_value``
         """
-        shape = (3 * observation_space.shape[0],)
-        return gym.spaces.Box(
-            low=np.concatenate([observation_space.low, observation_space.low, observation_space.low]),
-            high=np.concatenate([observation_space.high, observation_space.high, observation_space.high]),
-            shape=shape,
-            dtype=observation_space.dtype
+        return self.forward_actor(features), self.forward_critic(features)
+
+    def forward_actor(self, features: torch.Tensor) -> torch.Tensor:
+        return self.policy_net(features)
+
+    def forward_critic(self, features: torch.Tensor) -> torch.Tensor:
+        return self.value_net(features)
+
+    
+class Policy(nn.Module):
+    def __init__(self, observation_space, action_dims, net_arch, activation_fn,):
+        super().__init__()
+        self.features_extractor = FlattenExtractor(observation_space)
+        self.pi_features_extractor = self.features_extractor
+        self.vf_features_extractor = self.features_extractor
+        self.mlp_extractor = MlpExtractor(
+            self.features_extractor.features_dim,
+            net_arch=net_arch,
+            activation_fn=activation_fn,
         )
-
-    def _extend_observation(self, current_obs):
-        """
-        Concatenates the current observation with the previous observation.
-        
-        :param current_obs: The current observation.
-        :return: The concatenated observation.
-        """
-        extended_obs = np.concatenate([self.prev_prev_obs, self.prev_obs, current_obs])
-        # Update the previous observation with the current one
-        self.prev_prev_obs = self.prev_obs
-        self.prev_obs = current_obs
-        return extended_obs
-
-    def reset(self, **kwargs):
-        """
-        Resets the environment and reinitializes the observation memory.
-        
-        :param kwargs: Additional arguments for the reset method.
-        :return: The extended initial observation (null + current observation).
-        """
-        # Reset the environment and get the current observation
-        current_obs, info = self.env.reset(**kwargs)
-        # Reset the memory (null observation)
-        self.prev_obs = np.zeros_like(current_obs)
-        self.prev_prev_obs = np.zeros_like(current_obs)
-        return self._extend_observation(current_obs), info
-
-    def step(self, action):
-        """
-        Takes a step in the environment using the provided action.
-        Extends the observation by concatenating the previous and current observations.
-        
-        :param action: The action to take.
-        :return: A tuple (observation, reward, done, info) with the extended observation.
-        """
-        # Take the step in the environment
-        current_obs, reward, terminated, truncated, info, *_ = self.env.step(action)
-        # Return the extended observation (previous + current), reward, done, and info
-        return self._extend_observation(current_obs), reward, terminated, truncated, info
-
-class PreprocessObservationWrapper(gym.ObservationWrapper):
-    def __init__(self, env):
-        """
-        A Gym wrapper to preprocess mixed observation space (continuous + discrete)
-        into a flat tensor.
-        
-        Args:
-            env: The Gym environment to wrap.
-        """
-        super().__init__(env)
-        self.observation_space = self._get_flat_observation_space(env.observation_space)
-
-    def _get_flat_observation_space(self, observation_space):
-        """
-        Create a flat observation space based on the original observation space.
-        
-        Args:
-            observation_space: Original observation space with 'continuous' and 'discrete' components.
-        
-        Returns:
-            A flattened observation space.
-        """
-        continuous_dim = observation_space['continuous'].shape[0]
-        discrete_dims = sum(space.n for space in observation_space['discrete'])
-        flat_dim = continuous_dim + discrete_dims
-        return gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(flat_dim,), dtype=float)
-
-    def observation(self, obs):
-        """
-        Process the observation into a flat tensor.
-        
-        Args:
-            obs: The raw observation from the environment.
-        
-        Returns:
-            A preprocessed flat tensor.
-        """
-        continuous_obs, discrete_obs = obs['continuous'], obs['discrete']
-        continuous_tensor = torch.FloatTensor(continuous_obs)
-        
-        discrete_tensors = [
-            F.one_hot(torch.tensor(x), num_classes=num_classes.n).float()
-            for x, num_classes in zip(discrete_obs, self.env.observation_space['discrete'])
-        ]
-        
-        flat_tensor = torch.cat([continuous_tensor] + discrete_tensors)
-        return flat_tensor
-
-# make_stkenv = partial(make_env, "ok", wrappers=[], render_mode=None, autoreset=True, agent=AgentSpec(use_ai=False, name="ok"))
-
-# Parallel environments
+        self.action_net = nn.Linear(net_arch[-1], sum(action_dims))
+        self.value_net = nn.Linear(net_arch[-1], 1)
 
 
 class UnifiedSACPolicy(nn.Module):
-    def __init__(self, policy_stb,):
+    def __init__(self, observation_space, action_dims, net_arch, activation_fn):
         super().__init__()
         
-        self.shared = policy_stb
+        self.shared = Policy(
+            observation_space,
+            action_dims,
+            net_arch=net_arch,
+            activation_fn=activation_fn
+        )
+        self.action_dims = action_dims
     
     def forward(self, x):
         x = self.shared.features_extractor(x)
