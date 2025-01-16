@@ -30,7 +30,8 @@ if __name__ == "__main__":
         env.observation_space, env.action_space,
         net_arch=[512,512,512,512], 
         activation_fn=torch.nn.SiLU,
-        state_dict_path='policy_512_512_512_512_SiLU_3_statedict'
+        # state_dict_path='policy_512_512_512_512_SiLU_3_statedict'
+        state_dict_path='ppo_policy_512_512_512_512_SiLU_3_statedict'
     )
     # ...
 
