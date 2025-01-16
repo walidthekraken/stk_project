@@ -28,9 +28,9 @@ if __name__ == "__main__":
     mod_path = Path(inspect.getfile(get_wrappers)).parent
     actor = Actor(
         env.observation_space, env.action_space,
-        net_arch=[1024,1024,1024,1024], 
+        net_arch=[512,512,512,512], 
         activation_fn=torch.nn.SiLU,
-        state_dict_path=(mod_path / 'policy_1024_1024_1024_1024_SiLU_statedict')
+        state_dict_path='policy_512_512_512_512_SiLU_3_statedict'
     )
     # ...
 
