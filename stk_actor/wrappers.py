@@ -75,7 +75,7 @@ class ObsTimeExtensionWrapper(gym.Wrapper):
         return self._extend_observation(current_obs), reward, terminated, truncated, info
 
 class PreprocessObservationWrapper(gym.ObservationWrapper):
-    def __init__(self, env):
+    def __init__(self, env, ret_dict=True):
         """
         A Gym wrapper to preprocess mixed observation space (continuous + discrete)
         into a flat tensor.
@@ -85,6 +85,7 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         """
         super().__init__(env)
         self.observation_space = self._get_flat_observation_space(env.observation_space)
+        self.ret_dict = ret_dict
 
     def _get_flat_observation_space(self, observation_space):
         """
@@ -120,6 +121,8 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         ]
         
         flat_array = np.concatenate([continuous_array] + discrete_arrays)
-        return {
-            'obs':flat_array,
-        }
+        if self.ret_dict:
+            return {
+                'obs':flat_array,
+            }
+        return flat_array
