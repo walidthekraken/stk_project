@@ -31,10 +31,12 @@ if __name__ == "__main__":
         net_arch=[512,512,512,512], 
         activation_fn=torch.nn.SiLU,
         # state_dict_path='policy_512_512_512_512_SiLU_3_statedict'
-        state_dict_path='ppo_policy_512_512_512_512_SiLU_4_statedict'
+        # state_dict_path='ppo_policy_512_512_512_512_SiLU_4_statedict'
+        # state_dict_path='policy_512_512_512_512_SiLU_statedict'
+        state_dict_path='policy_l3_512_512_512_512_SiLU_statedict'
+        # state_dict_path='policy_notnorm_512_512_512_512_SiLU_statedict'
     )
     # ...
 
     # (3) Save the actor sate
-
     torch.save(actor.state_dict(), mod_path / "pystk_actor.pth")

@@ -1,3 +1,4 @@
 PYTHONPATH=. python -m stk_actor.learn
 (cd stk_actor; zip -r ../stk_actor.zip .)  
 master-dac rld stk-race --hide stk_actor.zip --num-karts 4
+master-dac rld stk-race stk_actor.zip --num-karts 4

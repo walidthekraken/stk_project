@@ -32,5 +32,5 @@ def get_wrappers() -> List[Callable[[gym.Env], gym.Wrapper]]:
     environment"""
     return [
         # Example of a custom wrapper
-        lambda env: PreprocessObservationWrapper(env)
+        lambda env: PreprocessObservationWrapper(env, norm=True, ret_dict=True)
     ]
