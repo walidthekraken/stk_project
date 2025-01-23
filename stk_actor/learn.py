@@ -28,12 +28,12 @@ if __name__ == "__main__":
     mod_path = Path(inspect.getfile(get_wrappers)).parent
     actor = Actor(
         env.observation_space, env.action_space,
-        net_arch=[512,512,512,512], 
-        activation_fn=torch.nn.SiLU,
+        net_arch=[1024,1024,1024], 
+        activation_fn=torch.nn.Tanh,
         # state_dict_path='policy_512_512_512_512_SiLU_3_statedict'
         # state_dict_path='ppo_policy_512_512_512_512_SiLU_4_statedict'
         # state_dict_path='policy_512_512_512_512_SiLU_statedict'
-        state_dict_path='policy_l3_512_512_512_512_SiLU_statedict'
+        state_dict_path='policy_normed_1024_1024_1024_Tanh_statedict'
         # state_dict_path='policy_notnorm_512_512_512_512_SiLU_statedict'
     )
     # ...

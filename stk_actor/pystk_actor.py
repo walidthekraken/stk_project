@@ -6,9 +6,10 @@ import gymnasium as gym
 # IMPORTANT: note the relative import
 from .actors import Actor, MyWrapper, ArgmaxActor, SamplingActor
 from .wrappers import PreprocessObservationWrapper
-
+from pystk2_gymnasium.stk_wrappers import ConstantSizedObservations, PolarObservations, DiscreteActionsWrapper
+from pystk2_gymnasium.wrappers import FlattenerWrapper
 #: The base environment name
-env_name = "supertuxkart/flattened_multidiscrete-v0"
+env_name = "supertuxkart/full-v0"
 
 #: Player name
 player_name = "CherineJSK2"
@@ -30,7 +31,8 @@ def get_actor(
 def get_wrappers() -> List[Callable[[gym.Env], gym.Wrapper]]:
     """Returns a list of additional wrappers to be applied to the base
     environment"""
+    ll = lambda env : FlattenerWrapper(DiscreteActionsWrapper(PolarObservations(ConstantSizedObservations(env))))
     return [
         # Example of a custom wrapper
-        lambda env: PreprocessObservationWrapper(env, norm=True, ret_dict=True)
+        lambda env: PreprocessObservationWrapper(ll(env), norm=True, ret_dict=True)
     ]

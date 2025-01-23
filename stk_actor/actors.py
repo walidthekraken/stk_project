@@ -24,8 +24,8 @@ class Actor(Agent):
             observation_space, 
             action_space,
             *args, 
-            net_arch=[512,512,512,512], 
-            activation_fn=torch.nn.SiLU,
+            net_arch=[1024,1024,1024], 
+            activation_fn=torch.nn.Tanh,
             state_dict_path= None,#mod_path/"policy_l2_512_512_512_512_SiLU_statedict",#(Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
             **kwargs,
         ):
@@ -52,8 +52,6 @@ class Actor(Agent):
         # Computes probabilities over actions
         observation = self.get(("env/env_obs/normed_obs", t))
         normed = self.get(("env/env_obs/normed", t))
-        #print(observation.shape, self.mean.unsqueeze(0).shape, self.std.unsqueeze(0).shape)
-        # normed_observation = (observation - self.mean.unsqueeze(0)) / (self.std.unsqueeze(0) + 1e-8) 
         logits = self.policy.forward(observation)
         self.set(("logits", t), logits)
         self.set(("action_dims", t), torch.tensor(self.action_dims))
@@ -71,11 +69,8 @@ class ArgmaxActor(Agent):
         for logit in split_logits:
             distribution = Categorical(logits=logit)
             action = distribution.sample()
-            
             # action = torch.argmax(logit, dim=-1)[0]
             actions.append(action)
-        # print(actions)
-        # print(torch.stack(actions).unsqueeze(0))
         self.set(("action", t), torch.stack(actions).unsqueeze(0))
 
 
