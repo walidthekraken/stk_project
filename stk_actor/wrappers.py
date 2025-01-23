@@ -117,7 +117,7 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         self.ret_dict = ret_dict
         mod_path = Path(inspect.getfile(SACRolloutBuffer)).parent
         self.mean = torch.load(mod_path/'buffer_mean', map_location='cpu')
-        self.std = torch.load(mod_path/'buffer_std', map_location='cpu')
+        self.std = torch.load(mod_path/'buffer_std', map_location='cpu',)
         self.norm = norm
 
     def _get_flat_observation_space(self, observation_space):
