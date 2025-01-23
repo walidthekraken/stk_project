@@ -15,6 +15,7 @@ class MyWrapper(gym.ActionWrapper):
         # We do nothing here
         return action
 
+mod_path = Path(inspect.getfile(UnifiedSACPolicy)).parent
 
 class Actor(Agent):
     """Computes probabilities over action"""
@@ -23,9 +24,9 @@ class Actor(Agent):
             observation_space, 
             action_space,
             *args, 
-            net_arch=[512,512,512,512], 
-            activation_fn=torch.nn.SiLU,
-            state_dict_path= None,#(Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
+            net_arch=[1024,1024,1024], 
+            activation_fn=torch.nn.Tanh,
+            state_dict_path= None,#mod_path/"policy_l2_512_512_512_512_SiLU_statedict",#(Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
             **kwargs,
         ):
         super().__init__(*args, **kwargs)
@@ -37,7 +38,10 @@ class Actor(Agent):
             activation_fn = activation_fn,
         )
         if state_dict_path is not None:
-            policy.load_state_dict(torch.load(state_dict_path))
+            print('LOADING',state_dict_path)
+            policy.load_state_dict(torch.load(state_dict_path, weights_only=True),)
+        else:
+            print('NOT Loading Dict')
 
         self.policy = policy
         self.observation_space = observation_space
@@ -46,7 +50,8 @@ class Actor(Agent):
 
     def forward(self, t: int):
         # Computes probabilities over actions
-        observation = self.get(("env/env_obs/obs", t))
+        observation = self.get(("env/env_obs/normed_obs", t))
+        normed = self.get(("env/env_obs/normed", t))
         logits = self.policy.forward(observation)
         self.set(("logits", t), logits)
         self.set(("action_dims", t), torch.tensor(self.action_dims))
@@ -60,14 +65,12 @@ class ArgmaxActor(Agent):
         action_dims = self.get(("action_dims", t))
         split_logits = torch.split(logits, action_dims.tolist(), dim=-1)
         actions = []
-        
                 
         for logit in split_logits:
             distribution = Categorical(logits=logit)
             action = distribution.sample()
             # action = torch.argmax(logit, dim=-1)[0]
             actions.append(action)
-        # print(actions)
         self.set(("action", t), torch.stack(actions).unsqueeze(0))
 
 
@@ -80,3 +83,4 @@ class SamplingActor(Agent):
 
     def forward(self, t: int):
         self.set(("action", t), torch.LongTensor([self.action_space.sample()]))
+

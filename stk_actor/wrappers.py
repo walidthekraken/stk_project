@@ -2,8 +2,10 @@
 import gymnasium as gym
 import numpy as np
 import torch
-
+from pathlib import Path
 import torch.functional as F
+import inspect
+from .replay_buffer import SACRolloutBuffer
 
 class ObsTimeExtensionWrapper(gym.Wrapper):
     def __init__(self, env):
@@ -74,8 +76,35 @@ class ObsTimeExtensionWrapper(gym.Wrapper):
         # Return the extended observation (previous + current), reward, done, and info
         return self._extend_observation(current_obs), reward, terminated, truncated, info
 
+class StuckStopWrapper(gym.Wrapper):
+    def __init__(self, env, n=16):
+        """
+        :param env: The inner environment to wrap.
+        :param n: Stuck timesteps to tolerate.
+        """
+        super(StuckStopWrapper, self).__init__(env)
+        # Initialize memory with a null observation
+        self.rewards = [0 for _ in range(n)]
+
+    def step(self, action):
+        """
+        Takes a step in the environment using the provided action.
+        Extends the observation by concatenating the previous and current observations.
+        
+        :param action: The action to take.
+        :return: A tuple (observation, reward, done, info) with the extended observation.
+        """
+        # Take the step in the environment
+        current_obs, reward, terminated, truncated, info, *_ = self.env.step(action)
+        self.rewards.pop(0)
+        self.rewards.append(reward)
+        # print([round(x,1) for x in self.rewards])
+        if all([round(x,1)==-0.1 for x in self.rewards]):
+            truncated = True
+        return current_obs, reward, terminated, truncated, info
+
 class PreprocessObservationWrapper(gym.ObservationWrapper):
-    def __init__(self, env, ret_dict=True):
+    def __init__(self, env, ret_dict=True, norm=True):
         """
         A Gym wrapper to preprocess mixed observation space (continuous + discrete)
         into a flat tensor.
@@ -86,6 +115,10 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         super().__init__(env)
         self.observation_space = self._get_flat_observation_space(env.observation_space)
         self.ret_dict = ret_dict
+        mod_path = Path(inspect.getfile(SACRolloutBuffer)).parent
+        self.mean = torch.load(mod_path/'buffer_mean', map_location='cpu')
+        self.std = torch.load(mod_path/'buffer_std', map_location='cpu')
+        self.norm = norm
 
     def _get_flat_observation_space(self, observation_space):
         """
@@ -121,8 +154,15 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         ]
         
         flat_array = np.concatenate([continuous_array] + discrete_arrays)
+        flat_array = torch.tensor(flat_array)
+        normed_array = flat_array
+        if self.norm:
+            normed_array = (flat_array - self.mean) / (self.std + 1e-8)
+            # print(f"{normed_array.shape=}")
         if self.ret_dict:
             return {
-                'obs':flat_array,
+                'normed_obs':normed_array.numpy(),
+                'obs':flat_array.numpy(),
+                'normed':1 if self.norm else 0
             }
-        return flat_array
+        return normed_array.numpy()

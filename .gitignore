@@ -1,2 +1,6 @@
-all_tracks_buffer_steps_2mil
+all_tracks_buffer_steps*
+airl_*
 __pycache__
+policy_*
+ppo_policy*
+ppti_*
