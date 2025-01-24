@@ -45,10 +45,10 @@ class SACRolloutBuffer:
         
         # Initialize storage
         self.observations = torch.zeros((buffer_size, obs_dim))
-        self.prev_observations = torch.zeros((buffer_size, obs_dim))
+        # self.prev_observations = torch.zeros((buffer_size, obs_dim))
         self.actions = [torch.zeros(buffer_size, dtype=torch.long) for _ in action_dims]
         self.rewards = torch.zeros((buffer_size, 1))
-        self.next_observations = torch.zeros((buffer_size, obs_dim))
+        # self.next_observations = torch.zeros((buffer_size, obs_dim))
         self.dones = torch.zeros((buffer_size, 1))
         self.track = torch.zeros((buffer_size, 1))
         self.steps = torch.zeros((buffer_size, 1))
@@ -77,7 +77,12 @@ class SACRolloutBuffer:
             'zengarden':20,
         }
     
-    def add(self, obs, actions, reward, next_obs, done, step, track, prev_obs):
+    def add(
+            self, obs, actions, reward, 
+            # next_obs, 
+            done, step, track, 
+            # prev_obs
+        ):
         """
         Add a transition to the buffer
         
@@ -92,8 +97,8 @@ class SACRolloutBuffer:
         for i, action in enumerate(actions):
             self.actions[i][self.position] = action
         self.rewards[self.position] = reward
-        self.next_observations[self.position] = next_obs
-        self.prev_observations[self.position] = prev_obs
+        # self.next_observations[self.position] = next_obs
+        # self.prev_observations[self.position] = prev_obs
         self.dones[self.position] = done
         self.steps[self.position] = step
         self.track[self.position] = self.tracks[track]
@@ -108,7 +113,7 @@ class SACRolloutBuffer:
             self.observations[indices],
             torch.stack([actions[indices] for actions in self.actions]),
             self.rewards[indices],
-            self.next_observations[indices],
+            # self.next_observations[indices],
             self.dones[indices],
             self.steps[indices],
             self.track[indices],
@@ -136,70 +141,70 @@ class SACRolloutBuffer:
                 self.observations[indices],
                 torch.stack([actions[indices] for actions in self.actions]),
                 self.rewards[indices],
-                self.next_observations[indices],
-                self.prev_observations[indices],
+                # self.next_observations[indices],
+                # self.prev_observations[indices],
                 self.dones[indices],
                 self.steps[indices],
                 self.track[indices],
             )
-    def get_sequences_by_track(self, seq_len, batch_size):
-        """
-        Generate sequences of transitions grouped by track, with padding for LSTM training.
+    # def get_sequences_by_track(self, seq_len, batch_size):
+    #     """
+    #     Generate sequences of transitions grouped by track, with padding for LSTM training.
         
-        Args:
-            seq_len: Length of each sequence
-            batch_size: Number of sequences per batch
+    #     Args:
+    #         seq_len: Length of each sequence
+    #         batch_size: Number of sequences per batch
         
-        Yields:
-            Batches of padded sequences grouped by track
-        """
-        # Group indices by track
-        track_indices = {track: [] for track in self.tracks}
-        for idx in range(self.size):
-            track_name = next(key for key, value in self.tracks.items() if value == int(self.track[idx].item()))
-            track_indices[track_name].append(idx)
+    #     Yields:
+    #         Batches of padded sequences grouped by track
+    #     """
+    #     # Group indices by track
+    #     track_indices = {track: [] for track in self.tracks}
+    #     for idx in range(self.size):
+    #         track_name = next(key for key, value in self.tracks.items() if value == int(self.track[idx].item()))
+    #         track_indices[track_name].append(idx)
         
-        # Generate sequences for each track
-        for track, indices in track_indices.items():
-            if not indices:
-                continue
+    #     # Generate sequences for each track
+    #     for track, indices in track_indices.items():
+    #         if not indices:
+    #             continue
             
-            sequences = []
-            indices = np.array(indices)
+    #         sequences = []
+    #         indices = np.array(indices)
             
-            for start_idx in range(len(indices)):
-                end_idx = start_idx
-                seq_indices = indices[max(0, end_idx - seq_len):end_idx]
+    #         for start_idx in range(len(indices)):
+    #             end_idx = start_idx
+    #             seq_indices = indices[max(0, end_idx - seq_len):end_idx]
                 
-                # Pad with zeros if sequence is shorter than seq_len
-                pad_len = seq_len - len(seq_indices)
-                obs_seq = torch.zeros((seq_len, self.obs_dim))
-                act_seq = torch.zeros((seq_len, self.num_actions), dtype=torch.long)
-                rew_seq = torch.zeros((seq_len, 1))
-                next_obs_seq = torch.zeros((seq_len, self.obs_dim))
-                done_seq = torch.zeros((seq_len, 1))
-                step_seq = torch.zeros((seq_len, 1))
+    #             # Pad with zeros if sequence is shorter than seq_len
+    #             pad_len = seq_len - len(seq_indices)
+    #             obs_seq = torch.zeros((seq_len, self.obs_dim))
+    #             act_seq = torch.zeros((seq_len, self.num_actions), dtype=torch.long)
+    #             rew_seq = torch.zeros((seq_len, 1))
+    #             next_obs_seq = torch.zeros((seq_len, self.obs_dim))
+    #             done_seq = torch.zeros((seq_len, 1))
+    #             step_seq = torch.zeros((seq_len, 1))
                 
-                obs_seq[pad_len:] = self.observations[seq_indices]
-                for i in range(self.num_actions):
-                    act_seq[pad_len:, i] = self.actions[i][seq_indices]
-                rew_seq[pad_len:] = self.rewards[seq_indices]
-                next_obs_seq[pad_len:] = self.next_observations[seq_indices]
-                done_seq[pad_len:] = self.dones[seq_indices]
-                step_seq[pad_len:] = self.steps[seq_indices]
+    #             obs_seq[pad_len:] = self.observations[seq_indices]
+    #             for i in range(self.num_actions):
+    #                 act_seq[pad_len:, i] = self.actions[i][seq_indices]
+    #             rew_seq[pad_len:] = self.rewards[seq_indices]
+    #             next_obs_seq[pad_len:] = self.next_observations[seq_indices]
+    #             done_seq[pad_len:] = self.dones[seq_indices]
+    #             step_seq[pad_len:] = self.steps[seq_indices]
                 
-                sequences.append((obs_seq, act_seq, rew_seq, next_obs_seq, done_seq, step_seq))
+    #             sequences.append((obs_seq, act_seq, rew_seq, next_obs_seq, done_seq, step_seq))
             
-            # Yield sequences in batches
-            for batch_start in range(0, len(sequences), batch_size):
-                batch = sequences[batch_start:batch_start + batch_size]
-                yield (
-                    track,
-                    torch.stack([seq[0] for seq in batch]),  # Observations
-                    torch.stack([seq[1] for seq in batch]),  # Actions
-                    torch.stack([seq[2] for seq in batch]),  # Rewards
-                    torch.stack([seq[3] for seq in batch]),  # Next observations
-                    torch.stack([seq[4] for seq in batch]),  # Dones
-                    torch.stack([seq[5] for seq in batch]),  # Steps
-                )
+    #         # Yield sequences in batches
+    #         for batch_start in range(0, len(sequences), batch_size):
+    #             batch = sequences[batch_start:batch_start + batch_size]
+    #             yield (
+    #                 track,
+    #                 torch.stack([seq[0] for seq in batch]),  # Observations
+    #                 torch.stack([seq[1] for seq in batch]),  # Actions
+    #                 torch.stack([seq[2] for seq in batch]),  # Rewards
+    #                 torch.stack([seq[3] for seq in batch]),  # Next observations
+    #                 torch.stack([seq[4] for seq in batch]),  # Dones
+    #                 torch.stack([seq[5] for seq in batch]),  # Steps
+    #             )
 
