@@ -68,8 +68,8 @@ class ArgmaxActor(Agent):
                 
         for logit in split_logits:
             distribution = Categorical(logits=logit)
-            action = distribution.sample()
-            # action = torch.argmax(logit, dim=-1)[0]
+            # action = distribution.sample()
+            action = torch.argmax(logit, dim=-1)[0]
             actions.append(action)
         self.set(("action", t), torch.stack(actions).unsqueeze(0))
 
