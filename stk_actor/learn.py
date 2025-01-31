@@ -31,7 +31,9 @@ if __name__ == "__main__":
         net_arch=[1024,1024,1024], 
         activation_fn=torch.nn.Tanh,
         # state_dict_path='policy_normed_1024_1024_1024_Tanh_statedict'
-        state_dict_path='ppo_policy_normed_1024_1024_1024_Tanh_statedict'
+        # state_dict_path='ppo_policy_normed_1024_1024_1024_Tanh_statedict'
+        # state_dict_path='a2c_policy_normed_1024_1024_1024_Tanh_statedict'
+        state_dict_path='a2c_2m_policy_normed_1024_1024_1024_Tanh_statedict'
     )
     # ...
 
