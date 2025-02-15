@@ -10,6 +10,6 @@ ppo_policy_*
 ppti_ppo_*
 policy_512*
 policy_1024*
-final_a2c*
+final_a2c_*.zip
 final_ppo*
 old_*
