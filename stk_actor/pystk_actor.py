@@ -28,11 +28,11 @@ def get_actor(
     return Agents(actor, ArgmaxActor())
 
 
-def get_wrappers() -> List[Callable[[gym.Env], gym.Wrapper]]:
+def get_wrappers(agent_name='normed_a2c_num5_best') -> List[Callable[[gym.Env], gym.Wrapper]]:
     """Returns a list of additional wrappers to be applied to the base
     environment"""
     ll = lambda env : FlattenerWrapper(DiscreteActionsWrapper(PolarObservations(ConstantSizedObservations(env))))
     return [
         # Example of a custom wrapper
-        lambda env: PreprocessObservationWrapper(ll(env), norm=True, ret_dict=True)
+        lambda env: PreprocessObservationWrapper(ll(env), norm=True, ret_dict=True, agent_name=agent_name)
     ]

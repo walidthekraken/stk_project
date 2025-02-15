@@ -11,11 +11,14 @@ from .pystk_actor import env_name, get_wrappers, player_name
 from .agent import UnifiedSACPolicy
 
 if __name__ == "__main__":
+
+
+    agent_name = 'normed_a2c_num5_best'
     # Setup the environment
     make_stkenv = partial(
         make_env,
         env_name,
-        wrappers=get_wrappers(),
+        wrappers=get_wrappers(agent_name=agent_name),
         render_mode=None,
         autoreset=True,
         agent=AgentSpec(use_ai=False, name=player_name),
@@ -33,7 +36,8 @@ if __name__ == "__main__":
         # state_dict_path='policy_normed_1024_1024_1024_Tanh_statedict'
         # state_dict_path='ppo_policy_normed_1024_1024_1024_Tanh_statedict'
         # state_dict_path='a2c_policy_normed_1024_1024_1024_Tanh_statedict'
-        state_dict_path='a2c_2m_policy_normed_1024_1024_1024_Tanh_statedict'
+        # state_dict_path='a2c_2m_policy_normed_1024_1024_1024_Tanh_statedict'
+        state_dict_path=mod_path/f'trained_agents/{agent_name}/statedict'
     )
     # ...
 

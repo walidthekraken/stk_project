@@ -104,7 +104,7 @@ class StuckStopWrapper(gym.Wrapper):
         return current_obs, reward, terminated, truncated, info
 
 class PreprocessObservationWrapper(gym.ObservationWrapper):
-    def __init__(self, env, ret_dict=True, norm=True):
+    def __init__(self, env, ret_dict=True, norm=True, agent_name='normed_a2c_num5_best' ):
         """
         A Gym wrapper to preprocess mixed observation space (continuous + discrete)
         into a flat tensor.
@@ -115,9 +115,10 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         super().__init__(env)
         self.observation_space = self._get_flat_observation_space(env.observation_space)
         self.ret_dict = ret_dict
-        mod_path = Path(inspect.getfile(SACRolloutBuffer)).parent
-        self.mean = torch.load(mod_path/'buffer_mean_2', map_location='cpu')
-        self.std = torch.load(mod_path/'buffer_std_2', map_location='cpu')
+        if norm is True:
+            mod_path = Path(inspect.getfile(SACRolloutBuffer)).parent
+            self.mean = torch.load(mod_path/f'trained_agents/{agent_name}/buffer_mean', map_location='cpu')
+            self.std = torch.load(mod_path/f'trained_agents/{agent_name}/buffer_std', map_location='cpu')
         self.norm = norm
 
     def _get_flat_observation_space(self, observation_space):
@@ -158,7 +159,7 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
         normed_array = flat_array
         if self.norm:
             normed_array = (flat_array - self.mean) / (self.std + 1e-8)
-            # print(f"{normed_array.shape=}")
+
         if self.ret_dict:
             return {
                 'normed_obs':normed_array.numpy(),
@@ -166,3 +167,22 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
                 'normed':1 if self.norm else 0
             }
         return normed_array.numpy()
+
+class SkipFirstNStepsWrapper(gym.Wrapper):
+    def __init__(self, env, n):
+        super().__init__(env)
+        self.n = n
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        steps_skipped = 0
+        
+        while steps_skipped < self.n:
+            obs, _, done, truncated, info = self.env.step(self.env.action_space.sample())
+            steps_skipped += 1
+            
+            if done or truncated:
+                obs, info = self.env.reset(**kwargs)
+                steps_skipped = 0  # Restart skipping process if reset happens
+
+        return obs, info
