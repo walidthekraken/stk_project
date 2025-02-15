@@ -26,7 +26,7 @@ class Actor(Agent):
             *args, 
             net_arch=[1024,1024,1024], 
             activation_fn=torch.nn.Tanh,
-            state_dict_path= None,#mod_path/"policy_l2_512_512_512_512_SiLU_statedict",#(Path(inspect.getfile(UnifiedSACPolicy)).parent / 'policy_1024_1024_1024_1024_SiLU_statedict'),
+            state_dict_path= None,
             **kwargs,
         ):
         super().__init__(*args, **kwargs)
@@ -56,7 +56,6 @@ class Actor(Agent):
         self.set(("logits", t), logits)
         self.set(("action_dims", t), torch.tensor(self.action_dims))
 
-
 class ArgmaxActor(Agent):
     """Actor that computes the action"""
 
@@ -67,7 +66,7 @@ class ArgmaxActor(Agent):
         actions = []
                 
         for logit in split_logits:
-            distribution = Categorical(logits=logit)
+            # distribution = Categorical(logits=logit)
             # action = distribution.sample()
             action = torch.argmax(logit, dim=-1)[0]
             actions.append(action)
@@ -75,12 +74,20 @@ class ArgmaxActor(Agent):
 
 
 class SamplingActor(Agent):
-    """Samples random actions"""
+    """Samples random actions from probability distributions"""
 
     def __init__(self, action_space: gym.Space):
         super().__init__()
         self.action_space = action_space
 
     def forward(self, t: int):
-        self.set(("action", t), torch.LongTensor([self.action_space.sample()]))
+        logits = self.get(("logits", t))
+        action_dims = self.get(("action_dims", t))
+        split_logits = torch.split(logits, action_dims.tolist(), dim=-1)
+        actions = []
+        for logit in split_logits:
+            distribution = Categorical(logits=logit)
+            action = distribution.sample()
+            actions.append(action)
+        self.set(("action", t), torch.stack(actions).unsqueeze(0))
 

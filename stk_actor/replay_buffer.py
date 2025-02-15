@@ -1,8 +1,8 @@
 import numpy as np
 
 import gymnasium as gym
-from pystk2_gymnasium import AgentSpec
 import torch
+import tqdm
 
 def calculate_total_obs_dim(observation_space):
     """
@@ -25,6 +25,17 @@ def calculate_total_obs_dim(observation_space):
         total_dim += n
         
     return total_dim
+
+def create_and_fill_replay_buffer(env, records,):
+    buffer_size = len(records)
+    buffer = SACRolloutBuffer(
+        buffer_size,
+        obs_dim=calculate_total_obs_dim(env.observation_space),
+        action_dims=[space.n for space in env.action_space]
+    )
+    for i in tqdm.tqdm(list(range(min(len(records), buffer_size)))):
+        buffer.add(**records[i])
+    return buffer
 
 class SACRolloutBuffer:
     def __init__(self, buffer_size, obs_dim, action_dims):
