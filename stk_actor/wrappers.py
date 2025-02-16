@@ -161,6 +161,7 @@ class PreprocessObservationWrapper(gym.ObservationWrapper):
             normed_array = (flat_array - self.mean) / (self.std + 1e-8)
 
         if self.ret_dict:
+            # This is done because of a bug where the evaluation expects a dict observation and not a vector
             return {
                 'normed_obs':normed_array.numpy(),
                 'obs':flat_array.numpy(),
