@@ -1,0 +1,10 @@
+# 1. Please move the notebooks out of the unzipped folder
+# 2. Please move the report out of the unzipped folder
+
+PYTHONPATH=. python -m stk_actor.learn
+(cd stk_actor; zip -r ../stk_actor.zip . -x "buffers/*" -x "trained_agents/non_normed_behavioral_cloning_num5/*" -x "trained_agents/non_normed_behavioral_cloning_num10/*" -x "trained_agents/normed_behavioral_cloning_num5/*" -x "trained_agents/normed_behavioral_cloning_num10/*" -x "trained_agents/normed_ppo_num5_no_init/*"
+)  
+
+master-dac rld stk-race --hide stk_actor.zip --num-karts 4
+
+master-dac rld stk-race stk_actor.zip --num-karts 4
